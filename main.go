@@ -1,4 +1,4 @@
-package movies_api
+package main
 
 import (
 	"encoding/json"
@@ -31,7 +31,7 @@ func main() {
 	movies = append(movies, Movie{ID: "2", Isbn: "5787539", Title: "Sweet Jesus", Director: &Director{Firstname: "Harry", Lastname: "Fin"}})
 
 	router.HandleFunc("/movies", getMovies).Methods(http.MethodGet)
-	router.HandleFunc("/movie/{id}", getMovie).Methods(http.MethodGet)
+	router.HandleFunc("/movies/{id}", getMovie).Methods(http.MethodGet)
 	router.HandleFunc("/movies", createMovie).Methods(http.MethodPost)
 	router.HandleFunc("/movies/{id}", updateMovie).Methods(http.MethodPut)
 	router.HandleFunc("/movies/{id}", deleteMovie).Methods(http.MethodDelete)
@@ -40,7 +40,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8950", router))
 }
 
-func getMovies(responseWriter http.ResponseWriter, request *http.Request) {
+func getMovies(responseWriter http.ResponseWriter, _ *http.Request) {
 	responseWriter.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(responseWriter).Encode(movies)
 	if err != nil {
@@ -67,18 +67,34 @@ func getMovie(responseWriter http.ResponseWriter, request *http.Request) {
 func createMovie(responseWriter http.ResponseWriter, request *http.Request) {
 	responseWriter.Header().Set("Content-Type", "application/json")
 	var movie Movie
-	_ = json.NewDecoder(request.Body).Decode(&movie)
+	err := json.NewDecoder(request.Body).Decode(&movie)
 	movie.ID = strconv.Itoa(rand.Intn(100000000))
 	movies = append(movies, movie)
-	err := json.NewEncoder(responseWriter).Encode(movie)
+	err = json.NewEncoder(responseWriter).Encode(movie)
 	if err != nil {
-		log.Fatalf("Error while deleting movie: %v \n", err)
+		log.Fatalf("Error while creating movie: %v \n", err)
 		return
 	}
 }
 
 func updateMovie(responseWriter http.ResponseWriter, request *http.Request) {
-
+	responseWriter.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(request)
+	for index, item := range movies {
+		if item.ID == params["id"] {
+			movies = append(movies[:index], movies[index+1:]...)
+			var movie Movie
+			err := json.NewDecoder(request.Body).Decode(&movie)
+			movie.ID = item.ID
+			movies = append(movies, movie)
+			err = json.NewEncoder(responseWriter).Encode(movie)
+			if err != nil {
+				log.Fatalf("Error while updating movie: %v \n", err)
+				return
+			}
+			break
+		}
+	}
 }
 
 func deleteMovie(responseWriter http.ResponseWriter, request *http.Request) {
